@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory TrainMe</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            text-align: center; 
+            background-color: #E6F8F3;
+            color: #3643BA;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        h1 { font-size: 2.5rem; margin-bottom: 20px; }
+        p { font-size: 1.2rem; margin-bottom: 20px; }
+        .memory-game { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 15px; 
+            width: 450px;
+            margin: auto; 
+        }
+        .card { 
+            width: 120px; 
+            height: 120px; 
+            background: #3643BA; 
+            color: #FFFFFF; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            font-weight: bold;
+            border-radius: 10px;
+            font-size: 14px; 
+            text-align: center;
+            padding: 5px;
+        }
+        .flipped { 
+            background: #FFFFFF; 
+            color: #3643BA; 
+            border: 2px solid #3643BA;
+        }
+        .hidden { visibility: hidden; }
+        
+        input { padding: 5px; margin-bottom: 10px; }
+        
+        /* Styles pour le classement */
+        .leaderboard { 
+            display: none; 
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #FFFFFF;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 60%;
+            max-width: 500px;
+            text-align: left;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #3643BA;
+            text-align: center;
+        }
+        th {
+            background-color: #3643BA;
+            color: white;
+        }
+        td {
+            background-color: #f4f4f4;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        .button-container button {
+            background-color: #3643BA;
+            color: #FFFFFF;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .button-container button:hover {
+            background-color: #2A318D;
+        }
+    </style>
+</head>
+<body>
+    <!-- Page de garde -->
+    <div id="landing-page">
+        <h1>Memory TrainMe</h1>
+        <p>🎉 Bienvenue dans le Memory TrainMe ! 🎉</p>
+        <p>Retourne les cartes une par une et forme des paires pour découvrir la plateforme de marque TrainMe de manière ludique. Par exemple, si tu tombes sur la carte "TOV" (Ton of Voice), la paire correspondante pourrait être "Sport, Fun et Calme" (c'est juste un exemple 😉).</p>
+        <p>Le but ? Apprendre en s'amusant, et à la fin, tu pourras voir ton classement final ! Prêt à relever le défi ? 🎮💡</p>
+
+        <label for="player-name">Entrez votre prénom et nom :</label>
+        <input type="text" id="player-name" placeholder="Prénom Nom">
+        <button onclick="startGame()">Commencer</button>
+        <p>⏳ Temps écoulé : <span id="timer">0</span> secondes</p>
+    </div>
+
+    <!-- Section pour le classement -->
+    <div class="leaderboard" id="leaderboard">
+        <h2>🏆 Classement</h2>
+        <table id="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Nom</th>
+                    <th>Temps</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Le classement sera inséré ici -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="memory-game" id="game-board" style="display: none;"></div>
+
+    <script>
+        const cards = [
+            { text: "TOV", pair: "Dynamique, décomplexé et proximité" },
+            { text: "Valeurs", pair: "Coeur, corps et conscience" },
+            { text: "Mission", pair: "Avoir un impact positif sur la santé et faciliter l'accès au sport et bien-être" },
+            { text: "Vision", pair: "Les activités physiques sont indispensables pour une vie en bonne santé" },
+            { text: "Ambition", pair: "Devenir le rendez-vous quotidien" },
+            { text: "Promesse", pair: "Être le partenaire pour booster la santé tout en alliant humain et sur-mesure" },
+            { text: "Engagement", pair: "Répondre sous 24h, service rapide" },
+            { text: "Dynamique, décomplexé et proximité", pair: "TOV" },
+            { text: "Coeur, corps et conscience", pair: "Valeurs" },
+            { text: "Avoir un impact positif sur la santé et faciliter l'accès au sport et bien-être", pair: "Mission" },
+            { text: "Les activités physiques sont indispensables pour une vie en bonne santé", pair: "Vision" },
+            { text: "Devenir le rendez-vous quotidien", pair: "Ambition" },
+            { text: "Être le partenaire pour booster la santé tout en alliant humain et sur-mesure", pair: "Promesse" },
+            { text: "Répondre sous 24h, service rapide", pair: "Engagement" }
+        ]; 
+        
+        let gameBoard = document.getElementById("game-board");
+        let timerElement = document.getElementById("timer");
+        let shuffledCards = [...cards].sort(() => Math.random() - 0.5);
+        let flippedCards = [];
+        let timeElapsed = 0;
+        let timer;
+        let playerName = "";
+        
+        function startGame() {
+            playerName = document.getElementById("player-name").value;
+            if (!playerName) {
+                alert("Veuillez entrer votre prénom et nom pour commencer.");
+                return;
+            }
+
+            // Masquer la page de garde
+            document.getElementById("landing-page").style.display = "none";
+            gameBoard.style.display = "grid";
+            startTimer();
+            
+            shuffledCards.forEach((card) => {
+                let div = document.createElement("div");
+                div.classList.add("card");
+                div.dataset.pair = card.pair;
+                div.textContent = "?";
+                div.addEventListener("click", () => flipCard(div, card.text));
+                gameBoard.appendChild(div);
+            });
+        }
+        
+        function startTimer() {
+            timer = setInterval(() => {
+                timeElapsed++;
+                timerElement.textContent = timeElapsed;
+            }, 1000);
+        }
+        
+        function stopTimer() {
+            clearInterval(timer);
+        }
+        
+        function flipCard(cardElement, text) {
+            if (flippedCards.length < 2 && !cardElement.classList.contains("flipped")) {
+                cardElement.classList.add("flipped");
+                cardElement.textContent = text;
+                flippedCards.push(cardElement);
+            }
+            
+            if (flippedCards.length === 2) {
+                setTimeout(checkMatch, 1000);
+            }
+        }
+        
+        function checkMatch() {
+            if (flippedCards[0].dataset.pair === flippedCards[1].textContent ||
+                flippedCards[1].dataset.pair === flippedCards[0].textContent) {
+                flippedCards.forEach(card => card.classList.add("hidden"));
+            } else {
+                flippedCards.forEach(card => {
+                    card.classList.remove("flipped");
+                    card.textContent = "?";
+                });
+            }
+            flippedCards = [];
+            
+            if (document.querySelectorAll(".card:not(.hidden)").length === 0) {
+                stopTimer();
+                saveScore(playerName, timeElapsed);
+            }
+        }
+        
+        function saveScore(name, time) {
+            alert(`${name}, tu as terminé en ${time} secondes !`);
+            let scores = JSON.parse(localStorage.getItem("memoryScores")) || [];
+            scores.push({ name, time });
+            scores.sort((a, b) => a.time - b.time);
+            localStorage.setItem("memoryScores", JSON.stringify(scores));
+            displayLeaderboard(scores);
+        }
+        
+        function displayLeaderboard(scores) {
+            let leaderboardTable = document.getElementById("leaderboard-table").getElementsByTagName("tbody")[0];
+            leaderboardTable.innerHTML = ""; // Reset the leaderboard
+            scores.forEach((score, index) => {
+                let row = leaderboardTable.insertRow();
+                row.insertCell(0).textContent = index + 1;
+                row.insertCell(1).textContent = score.name;
+                row.insertCell(2).textContent = score.time + " sec";
+            });
+            document.getElementById("leaderboard").style.display = "block";
+        }
+    </script>
+</body>
+</html>
